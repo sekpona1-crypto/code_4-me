@@ -1,0 +1,77 @@
+
+
+/*
+MiniTracker <span style="font-family: 'Courier 10 Pitch', Courier, monospace; font-size: 8px; font-style: normal;">Version 0.1</span>
+Tracker solaire pour panneau solaire, four, miroir..
+http://www.siine.eu
+*/
+#include <Servo.h> // IMPORTANT: Vous devrez supprimer les espaces avant et après Servo.h 
+Servo MonServo;
+int PosServo;  // Variable de position du servo, de 0 à 180°
+int Gauche; // Variables de valeur des photorésistances
+int Droite; 
+int LedTimer;
+int Ponderation = 12;
+int entreePhotoGauche = A0; // Photorésistances sur A0 et A1
+int entreePhotoDroite = A1;
+int LedPower = 13;
+
+void setup()
+{
+Serial.begin(9600);  // Monoteur série
+MonServo.attach(11); // Servo sur pin 11
+pinMode(LedPower, OUTPUT);
+LedTimer = 0;
+}
+void loop()
+{
+// On voit ce que racontent les photorésistances
+Gauche = analogRead(entreePhotoGauche);
+Droite = analogRead(entreePhotoDroite);
+// Si la luminosité générale n'est pas suffisante on le replace à sa position de départ. 
+// Idéalment c'est la nuit il sera en position pour le matin, au pire c'est un manque de luminosité et il retrouvera son chemin
+if ( (Droite + Gauche) < 600)
+{
+if (PosServo > 1)
+PosServo -= 1;
+MonServo.write(PosServo);
+}
+// Sinon il vit sa vie..
+else 
+{
+      // Si la valeur de droite est plus haute on tourne vers la droite
+      // On peut faire varier la valeur de la zone de pondération, mais si on la supprime le servo aura tendance à se trémousser sans fin
+      if ( Droite > (Gauche + Ponderation))
+      {
+      if (PosServo < 179)
+      PosServo++;
+      MonServo.write(PosServo);
+      }
+      // Si c'est la valeur de gauche on tourne vers la gauche
+      if (Gauche > (Droite + Ponderation))
+      {
+      if (PosServo > 1)
+      PosServo -= 1;
+      MonServo.write(PosServo);
+      }
+}
+// Affichage sur Moniteur Série
+Serial.print( "Gauche >   ");
+Serial.print(Droite);
+Serial.print( " | ");
+Serial.print(Gauche);
+Serial.println( "   < Droite");
+// Gestion de la LED d'activité.
+if ( LedTimer < 20 )
+{
+LedTimer++; 
+digitalWrite(LedPower, LOW);
+}
+else 
+{
+digitalWrite(LedPower, HIGH);
+LedTimer = 0;
+}
+// on attends 150 ms avant la prochaine boucle, rien ne sert de courir..
+delay(150);
+}
